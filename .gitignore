@@ -3,3 +3,6 @@ main.exe
 main
 fyline.exe
 fyline
+
+# Ignore GoLand settings
+.idea
