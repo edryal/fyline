@@ -1,0 +1,13 @@
+[Details]
+Icon = "Icon.png"
+Name = "Fyline"
+ID = "com.edryal.fyline"
+Version = "0.0.1"
+Build = 1
+
+[LinuxAndBSD]
+GenericName = "Voice & Screen Chat"
+Categories = ["Network", "AudioVideo", "Chat"]
+Comment = "Voice chat and screen sharing with friends"
+Keywords = ["chat", "voice", "screenshare", "call"]
+ExecParams = ""
