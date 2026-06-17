@@ -11,6 +11,11 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// Make the compiler check if we actually match the interfaces
+var (
+	_ desktop.Hoverable = (*MessageBlock)(nil)
+)
+
 type MessageBlock struct {
 	widget.BaseWidget
 	background *canvas.Rectangle

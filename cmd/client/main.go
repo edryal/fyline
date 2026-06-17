@@ -38,11 +38,13 @@ func main() {
 	// Send message when clicking the button
 	chatSendButton := widget.NewButton("Send", func() {
 		sendMessageAndClearEntry(currentUsername, chatInputEntry, chatContent)
+		chatVScroll.ScrollToBottom()
 	})
 
 	// Send message when pressing Shift+Enter
 	chatInputEntry.OnSubmitted = func(text string) {
 		sendMessageAndClearEntry(currentUsername, chatInputEntry, chatContent)
+		chatVScroll.ScrollToBottom()
 	}
 
 	chatInput := container.NewBorder(nil, nil, nil, chatSendButton, chatInputEntry)
