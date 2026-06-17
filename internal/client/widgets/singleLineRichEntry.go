@@ -20,16 +20,13 @@ func NewSingleLineRichEntry() *SingleLineRichEntry {
 	e.Wrapping = fyne.TextWrapWord
 	e.MultiLine = true
 
+	// Entry automatically becomes scrollable when there are more rows than maxVisibleEntryRows
+	// e.Scroll = fyne.ScrollVerticalOnly
+
 	e.SetMinRowsVisible(minVisibleEntryRows)
 	e.OnChanged = func(text string) {
-		rows := strings.Count(text, "\n") + 1
-
-		if rows > maxVisibleEntryRows {
-			rows = maxVisibleEntryRows
-		}
-
+		rows := min(strings.Count(text, "\n") + 1, maxVisibleEntryRows)
 		e.SetMinRowsVisible(rows)
 	}
-	//e.Scroll = fyne.ScrollVerticalOnly
 	return e
 }

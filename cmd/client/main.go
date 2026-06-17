@@ -16,14 +16,30 @@ func main() {
 	windowMain := application.NewWindow(ApplicationName)
 	windowMain.Resize(fyne.NewSize(1280, 720))
 
-	chatVScroll := container.NewVScroll(widget.NewLabel("Chat"))
+	chatContent := container.NewVBox(widget.NewLabel("Chat"))
+	chatVScroll := container.NewVScroll(chatContent)
 
-	chatInput := widgets.NewSingleLineRichEntry()
-	chatInput.SetPlaceHolder("Enter message...")
+	chatInputEntry := widgets.NewSingleLineRichEntry()
+	chatInputEntry.SetPlaceHolder("Enter message...")
 
 	s := binding.NewString()
 	_ = s.Set("Size will appear here")
 
+	// Send message when clicking the button
+	chatSendButton := widget.NewButton("Send", func() {
+		messageLabel := widget.NewLabel(chatInputEntry.Text)
+		chatContent.Add(messageLabel)
+		chatInputEntry.SetText("")
+	})
+
+	// Send message when pressing Shift+Enter
+	chatInputEntry.OnSubmitted = func(text string) {
+		messageLabel := widget.NewLabel(chatInputEntry.Text)
+		chatContent.Add(messageLabel)
+		chatInputEntry.SetText("")
+	}
+
+	chatInput := container.NewBorder(nil, nil, nil, chatSendButton, chatInputEntry)
 	chatBox := container.NewBorder(nil, chatInput, nil, nil, chatVScroll)
 
 	windowMain.SetContent(chatBox)
