@@ -2,7 +2,7 @@
 Icon = "Icon.png"
 Name = "Fyline"
 ID = "com.edryal.fyline"
-Version = "0.0.1"
+Version = "0.0.2"
 Build = 1
 
 [LinuxAndBSD]
