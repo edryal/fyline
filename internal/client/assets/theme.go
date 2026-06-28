@@ -9,13 +9,12 @@ type CompactTheme struct {
 	fyne.Theme
 }
 
-// TODO: 
 func (t CompactTheme) Size(name fyne.ThemeSizeName) float32 {
 	switch name {
 	case theme.SizeNameInnerPadding:
 		return 8
 	case theme.SizeNamePadding:
-		return 0
+		return 4
 	case theme.SizeNameLineSpacing:
 		return 0
 	}

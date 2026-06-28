@@ -1,92 +1,129 @@
 package main
 
 import (
+	"fmt"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
 	"github.com/edryal/fyline/internal/client/assets"
-	"github.com/edryal/fyline/internal/client/widgets"
+	netclient "github.com/edryal/fyline/internal/client/net"
+	"github.com/edryal/fyline/internal/client/ui/components"
+	"github.com/edryal/fyline/internal/client/ui/helpers"
+	"github.com/edryal/fyline/internal/client/ui/widgets"
+	"github.com/edryal/fyline/internal/protocol"
 )
 
 const ApplicationName = "Fyline"
 const Username = "Catalin"
+const ChannelsPanelOffset = 0.2
+const ServerURL = "ws://localhost:8080/ws"
 
 func main() {
 	application := app.New()
-	windowMain := application.NewWindow(ApplicationName)
-	windowMain.Resize(fyne.NewSize(1280, 720))
+	application.Settings().SetTheme(assets.CompactTheme{Theme: theme.DefaultTheme()})
+	applicationWindow := application.NewWindow(ApplicationName)
+	applicationWindow.Resize(fyne.NewSize(1280, 720))
 
-	// TODO: move this stuff either in another file for configurable variables
-	// or make them ENV variables
-	currentUsername := binding.NewString()
-	currentUsername.Set(Username)
+	// channels sidebar
+	channels := protocol.SeedChannels
+	sidebar := components.NewChannelsSidebar(channels)
 
-	chatContent := container.NewVBox(widget.NewLabel("Chat"))
-	compactChat := container.NewThemeOverride(chatContent, assets.CompactTheme{Theme: theme.DefaultTheme()})
-	chatVScroll := container.NewVScroll(compactChat)
-
-	chatInputEntry := widgets.NewSingleLineRichEntry()
-	chatInputEntry.SetPlaceHolder("Enter message...")
-
-	// Send message when clicking the button
-	chatSendButton := widget.NewButton("Send", func() {
-		sendMessageAndClearEntry(currentUsername, chatInputEntry, chatContent)
-		chatVScroll.ScrollToBottom()
-	})
-
-	// Send message when pressing Shift+Enter
-	chatInputEntry.OnSubmitted = func(text string) {
-		sendMessageAndClearEntry(currentUsername, chatInputEntry, chatContent)
-		chatVScroll.ScrollToBottom()
+	// per-channel chat view
+	chatView := helpers.NewChannelChatView()
+	for _, ch := range channels {
+		chatView.EnsureChannel(ch.ID)
 	}
 
-	chatInput := container.NewBorder(nil, nil, nil, chatSendButton, chatInputEntry)
-	chatBox := container.NewBorder(nil, chatInput, nil, nil, chatVScroll)
+	// message input row
+	entry := widgets.NewSingleLineRichEntry()
+	entry.SetPlaceHolder("Enter message...")
+	sendButton := widget.NewButton("Send", nil)
+	inputRow := container.NewBorder(nil, nil, nil, sendButton, entry)
+	chatArea := container.NewBorder(nil, inputRow, nil, nil, chatView.Root())
 
-	windowMain.SetContent(chatBox)
-	windowMain.ShowAndRun()
+	// create the split
+	bundledPanels := container.NewHSplit(sidebar.Root(), chatArea)
+	bundledPanels.SetOffset(ChannelsPanelOffset)
+	applicationWindow.SetContent(bundledPanels)
+
+	// switching channels swaps the visible message area
+	sidebar.OnSelect = func(channelID string) {
+		chatView.Show(channelID)
+	}
+
+	// activate the first channel so something is visible on launch
+	if len(channels) > 0 {
+		sidebar.Select(channels[0].ID)
+		chatView.Show(channels[0].ID)
+	}
+
+	// connect client to the server
+	client := netclient.New(ServerURL, Username, netclient.Handlers{
+		OnChat: func(msg protocol.ChatMessage) {
+			fmt.Printf("[OnChat] channelID=%q user=%q body=%q\n", msg.ChannelID, msg.Username, msg.Body)
+			fyne.Do(func() {
+				renderChatMessage(chatView, msg)
+			})
+		},
+		OnSystem: func(sys protocol.System) {
+			fyne.Do(func() {
+				renderSystemMessage(chatView, sidebar.ActiveID(), sys)
+			})
+		},
+		OnStatus: func(s netclient.Status) {
+			fyne.Do(func() {
+				applicationWindow.SetTitle(ApplicationName + " - " + s.String())
+			})
+		},
+	})
+	client.Start()
+	defer client.Close()
+
+	send := func() {
+		input := strings.TrimSpace(entry.Text)
+		if input == "" {
+			return
+		}
+		client.Send(sidebar.ActiveID(), input)
+		entry.SetText("")
+	}
+
+	sendButton.OnTapped = send
+	entry.OnSubmitted = func(string) {
+		send()
+	}
+
+	applicationWindow.ShowAndRun()
 }
 
-// TODO: add validator that will highlight wth red the entry when it cannot send the message
-func sendMessageAndClearEntry(currentUsername binding.String, chatInputEntry *widgets.SingleLineRichEntry, chatContent *fyne.Container) {
-	input := strings.TrimSpace(chatInputEntry.Text)
-	if input == "" {
-		return
-	}
-
-	// TODO: when we'll implement history and we'll have to display time for older messages
-	// Do a check if currentTime < Today's date, show the exact date + time
-	// currentTime will have to be like currentUsername, a binding, not raw string
-	currentTime := time.Now().Format(time.Kitchen)
+// routes an incoming message to the right channel's area by ChannelID needs to run on the UI thread
+func renderChatMessage(v *helpers.ChannelChatView, msg protocol.ChatMessage) {
+	ts := msg.SentAt.Local().Format("3:04 PM")
 
 	header := container.NewHBox(
-		widgets.NewChatUsernameLabel(currentUsername),
-		widgets.NewChatTimestampLabel(currentTime),
+		widgets.NewChatUsernameLabelText(msg.Username),
+		widgets.NewChatTimestampLabel(ts),
 	)
 
-	// Play with themeing padding to lower padding between header and body
-	message := container.NewVBox(
+	body := container.NewVBox(
 		header,
-		widgets.NewChatBodyLabel(input),
+		widgets.NewChatBodyLabel(msg.Body),
 	)
 
-	// Message becomes a block that can be hovered
-	block := widgets.NewMessageBlock(message)
+	block := widgets.NewMessageBlock(body)
+	spaced := container.New(layout.NewCustomPaddedLayout(0, 0, 0, 0), block)
 
-	// TODO: for later when we add more elements we'll most probably want extra padding
-	// Was used to add bottom padding between messages
-	spacedMessage := container.New(
-		layout.NewCustomPaddedLayout(0, 0, 0, 0),
-		block,
-	)
+	v.AppendTo(msg.ChannelID, spaced)
+}
 
-	chatContent.Add(spacedMessage)
-	chatInputEntry.SetText("")
+// appends a dimmed server notice to the active channel. needs to run on the UI thread
+func renderSystemMessage(v *helpers.ChannelChatView, activeID string, sys protocol.System) {
+	label := widgets.NewChatTimestampLabel(sys.Text)
+	v.AppendTo(activeID, label)
 }

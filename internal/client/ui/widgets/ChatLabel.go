@@ -27,7 +27,7 @@ func NewChatLabelWithData(data binding.String) *ChatLabel {
 	return chat
 }
 
-// Creates a Bold ChatLabel with a binding
+// creates a Bold ChatLabel with a binding
 func NewChatUsernameLabel(data binding.String) *ChatLabel {
 	chat := &ChatLabel{}
 	chat.ExtendBaseWidget(chat)
@@ -37,16 +37,24 @@ func NewChatUsernameLabel(data binding.String) *ChatLabel {
 	return chat
 }
 
-// Creates a dimmed ChatLabel
+// creates a dimmed ChatLabel
 func NewChatTimestampLabel(text string) *ChatLabel {
 	chat := NewChatLabel(text)
 	chat.Importance = widget.LowImportance
 	return chat
 }
 
-// Creates a ChatLabel with word-wrap enabled
+// creates a ChatLabel with word-wrap enabled
 func NewChatBodyLabel(text string) *ChatLabel {
 	chat := NewChatLabel(text)
 	chat.Wrapping = fyne.TextWrapWord
+	return chat
+}
+
+// creates a Bold ChatLabel from static text
+func NewChatUsernameLabelText(text string) *ChatLabel {
+	chat := NewChatLabel(text)
+	chat.TextStyle = fyne.TextStyle{Bold: true}
+	chat.Refresh()
 	return chat
 }

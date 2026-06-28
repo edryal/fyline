@@ -2,7 +2,11 @@ module github.com/edryal/fyline
 
 go 1.26.4
 
-require fyne.io/fyne/v2 v2.7.4
+require (
+	fyne.io/fyne/v2 v2.7.4
+	github.com/coder/websocket v1.8.15
+	github.com/google/uuid v1.6.0
+)
 
 require (
 	fyne.io/systray v1.12.1 // indirect

@@ -37,7 +37,6 @@ func NewSingleLineRichEntry() *SingleLineRichEntry {
 }
 
 func (e *SingleLineRichEntry) TypedKey(key *fyne.KeyEvent) {
-	fmt.Println("key at start: ", key.Name)
 	if key.Name == fyne.KeyReturn || key.Name == fyne.KeyEnter {
 		if e.isShiftHeld == true {
 			fmt.Println("Shift is being help: ", e.isShiftHeld)
