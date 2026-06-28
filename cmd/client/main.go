@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"flag"
+	"os"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -16,18 +17,45 @@ import (
 	"github.com/edryal/fyline/internal/client/ui/components"
 	"github.com/edryal/fyline/internal/client/ui/helpers"
 	"github.com/edryal/fyline/internal/client/ui/widgets"
+	"github.com/edryal/fyline/internal/debug"
 	"github.com/edryal/fyline/internal/protocol"
 )
 
 const ApplicationName = "Fyline"
-const Username = "Catalin"
 const ChannelsPanelOffset = 0.2
-const ServerURL = "ws://localhost:8080/ws"
+
+// username comes from -user flag, then FYLINE_USER, then the default
+func resolveUsername() string {
+	var flagUser string
+	flag.StringVar(&flagUser, "user", "", "username for this client")
+	flag.Parse()
+
+	if flagUser != "" {
+		return flagUser
+	}
+
+	if env := os.Getenv("FYLINE_USER"); env != "" {
+		return env
+	}
+
+	return "Catalin"
+}
+
+func resolveServerURL() string {
+	if env := os.Getenv("FYLINE_SERVER"); env != "" {
+		return env
+	}
+	return "ws://localhost:8080/ws"
+}
 
 func main() {
+	username := resolveUsername()
+	serverURL := resolveServerURL()
+	debug.Info("starting client", "user", username, "server", serverURL)
+
 	application := app.New()
 	application.Settings().SetTheme(assets.CompactTheme{Theme: theme.DefaultTheme()})
-	applicationWindow := application.NewWindow(ApplicationName)
+	applicationWindow := application.NewWindow(ApplicationName + " - " + username)
 	applicationWindow.Resize(fyne.NewSize(1280, 720))
 
 	// channels sidebar
@@ -54,6 +82,7 @@ func main() {
 
 	// switching channels swaps the visible message area
 	sidebar.OnSelect = func(channelID string) {
+		debug.Debug("channel switched", "channelID", channelID)
 		chatView.Show(channelID)
 	}
 
@@ -64,21 +93,23 @@ func main() {
 	}
 
 	// connect client to the server
-	client := netclient.New(ServerURL, Username, netclient.Handlers{
+	client := netclient.New(serverURL, username, netclient.Handlers{
 		OnChat: func(msg protocol.ChatMessage) {
-			fmt.Printf("[OnChat] channelID=%q user=%q body=%q\n", msg.ChannelID, msg.Username, msg.Body)
+			debug.Debug("recv chat", "channelID", msg.ChannelID, "user", msg.Username, "body", msg.Body)
 			fyne.Do(func() {
 				renderChatMessage(chatView, msg)
 			})
 		},
 		OnSystem: func(sys protocol.System) {
+			debug.Debug("recv system", "text", sys.Text)
 			fyne.Do(func() {
 				renderSystemMessage(chatView, sidebar.ActiveID(), sys)
 			})
 		},
 		OnStatus: func(s netclient.Status) {
+			debug.Info("connection status", "status", s.String())
 			fyne.Do(func() {
-				applicationWindow.SetTitle(ApplicationName + " - " + s.String())
+				applicationWindow.SetTitle(ApplicationName + " - " + username + " - " + s.String())
 			})
 		},
 	})
@@ -90,6 +121,7 @@ func main() {
 		if input == "" {
 			return
 		}
+		debug.Debug("send chat", "channelID", sidebar.ActiveID(), "body", input)
 		client.Send(sidebar.ActiveID(), input)
 		entry.SetText("")
 	}

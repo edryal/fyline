@@ -1,8 +1,6 @@
 package helpers
 
 import (
-	"fmt"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
@@ -12,7 +10,7 @@ import (
 
 type ChannelChatView struct {
 	// holds every channel's scroll container (only the active one is shown)
-	stack *fyne.Container
+	stack    *fyne.Container
 	contents map[string]*fyne.Container
 	scrolls  map[string]*container.Scroll
 	active   string
@@ -55,9 +53,13 @@ func (v *ChannelChatView) EnsureChannel(channelID string) {
 // adds a pre-built message widget to a channel's area
 // (creating the channel area if needed) and scrolls that channel to the bottom
 func (v *ChannelChatView) AppendTo(channelID string, item fyne.CanvasObject) {
-	fmt.Printf("[AppendTo] channelID=%q active=%q\n", channelID, v.active)
 	v.EnsureChannel(channelID)
 	v.contents[channelID].Add(item)
+
+	// FIXME: investigate how to more reliably refresh the scroll that holds messages so that chatting is more fluid.
+	// the Add() above also updates but doesn't reliably repaint the scroll, so messages only show after
+	// the next event (focus, hover on something in the UI), if we were to exlude this explicit refresh
+	v.scrolls[channelID].Refresh()
 	v.scrolls[channelID].ScrollToBottom()
 }
 

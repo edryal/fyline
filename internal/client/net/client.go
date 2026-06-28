@@ -3,12 +3,12 @@ package netclient
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+	"github.com/edryal/fyline/internal/debug"
 	"github.com/edryal/fyline/internal/protocol"
 )
 
@@ -111,7 +111,7 @@ func (c *Client) connectLoop() {
 		c.report(StatusConnecting)
 
 		if err := c.session(); err != nil {
-			log.Printf("session ended: %v", err)
+			debug.Debug("session ended", "err", err)
 		}
 		c.report(StatusDisconnected)
 
